@@ -2,7 +2,9 @@ from config.profile import PROFILE
 from kernel.system_state import SystemState
 from kernel.equity_tracker import EquityTracker
 from kernel.risk_controller import RiskController
-import random
+from intelligence.market_intelligence import MarketIntelligence
+from confluence.adaptive_confluence_engine import AdaptiveConfluenceEngine
+from execution.execution_router import ExecutionRouter
 
 
 def main():
@@ -11,29 +13,14 @@ def main():
     state = SystemState(PROFILE)
     tracker = EquityTracker()
     risk = RiskController()
+    intel = MarketIntelligence()
+    confluence = AdaptiveConfluenceEngine()
 
     state.reset_daily()
 
-    print(f"Capital Base: ₹{state.capital_base}")
-    print("System Mode:", state.mode)
+    router = ExecutionRouter(state, tracker, risk, intel, confluence)
 
-    # Simulated test trades
-    for i in range(5):
-        trade_return = random.uniform(-2, 2)  # simulate %
-        pnl = tracker.update_equity(state, trade_return)
-        status = risk.evaluate(state)
-
-        print(f"\nTrade {i+1}: {trade_return:.2f}%")
-        print(f"Equity: ₹{state.equity:,.2f}")
-        print(f"Drawdown: {state.total_drawdown_pct:.2f}%")
-        print(f"Mode: {state.mode}")
-        print(f"Risk Status: {status}")
-
-        if state.mode == "HALTED":
-            print("🛑 Trading Halted")
-            break
-
-    print("\n✅ Kernel Test Complete")
+    router.run_continuous(sleep_interval=1, max_cycles=30)
 
 
 if __name__ == "__main__":
