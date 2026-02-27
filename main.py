@@ -1,3 +1,4 @@
+import asyncio
 from config.profile import PROFILE
 from kernel.system_state import SystemState
 from kernel.equity_tracker import EquityTracker
@@ -5,10 +6,14 @@ from kernel.risk_controller import RiskController
 from intelligence.market_intelligence import MarketIntelligence
 from confluence.adaptive_confluence_engine import AdaptiveConfluenceEngine
 from execution.execution_router import ExecutionRouter
+from core.master_orchestrator import MasterOrchestrator
 
 
-def main():
+async def main():
+    
     print("🔥 Quant Ecosystem 2.1 Booting...")
+
+    orchestrator = MasterOrchestrator()
 
     state = SystemState(PROFILE)
     tracker = EquityTracker()
@@ -20,8 +25,11 @@ def main():
 
     router = ExecutionRouter(state, tracker, risk, intel, confluence)
 
-    router.run_continuous(sleep_interval=1, max_cycles=30)
+    # --- Master Brain ---
+    orchestrator = MasterOrchestrator()
+
+    await orchestrator.start(router)
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

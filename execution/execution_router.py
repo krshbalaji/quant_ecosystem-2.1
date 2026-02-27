@@ -4,6 +4,11 @@ import random
 
 
 class ExecutionRouter:
+    """
+    Pure execution worker.
+    Does ONE cycle.
+    Orchestrator owns loops and session control.
+    """
 
     def __init__(self, state, tracker, risk, intel, confluence):
         self.state = state
@@ -12,96 +17,84 @@ class ExecutionRouter:
         self.intel = intel
         self.confluence = confluence
 
-    def run_session(self, cycles=5):
-        print("\n🚦 Starting Execution Session")
+        self.cycles_completed = 0
 
-        for cycle in range(cycles):
+    def run_cycle(self):
+        """
+        Executes ONE decision cycle.
+        Returns structured result to Orchestrator.
+        """
 
-            if self.state.mode == "HALTED":
-                print("🛑 System Halted. Ending Session.")
-                break
+        if self.state.mode == "HALTED":
+            return {"status": "HALTED"}
 
-            snapshot = self.intel.generate_snapshot()
+        snapshot = self.intel.generate_snapshot()
 
-            print("\n📊 Intelligence Snapshot")
-            print(snapshot)
+        score, threshold, decision = self.confluence.calculate(snapshot)
 
-            score, threshold, decision = self.confluence.calculate(snapshot)
+        result = {
+            "snapshot": snapshot,
+            "score": score,
+            "threshold": threshold,
+            "decision": decision,
+            "trade_executed": False,
+            "trade_return": 0.0,
+            "equity": self.state.equity,
+            "drawdown": self.state.total_drawdown_pct,
+            "mode": self.state.mode,
+        }
 
-            print(f"Confluence Score: {score}")
-            print(f"Threshold: {threshold}")
-            print(f"Decision: {decision}")
+        if decision == "FILTER":
+            self.cycles_completed += 1
+            return result
+        
+        print("Router Execute Called")
 
-            if decision == "FILTER":
-                print("🚫 Trade Blocked")
-                continue
+        # Trade execution
+        if self.state.mode == "DEFENSIVE":
+            trade_return = random.uniform(-1, 1)
+        else:
+            trade_return = random.uniform(-2, 2)
 
-            if self.state.mode == "DEFENSIVE":
-                trade_return = random.uniform(-1, 1)  # reduced volatility
-            else:
-                trade_return = random.uniform(-2, 2)
+        self.tracker.update_equity(self.state, trade_return)
+        risk_status = self.risk.evaluate(self.state)
 
-            print(f"\n⚡ Executing Trade: {trade_return:.2f}%")
+        self.cycles_completed += 1
 
-            self.tracker.update_equity(self.state, trade_return)
-            status = self.risk.evaluate(self.state)
+        result.update({
+            "trade_executed": True,
+            "trade_return": trade_return,
+            "equity": self.state.equity,
+            "drawdown": self.state.total_drawdown_pct,
+            "mode": self.state.mode,
+            "risk_status": risk_status
+        })
 
-            print(f"Equity: ₹{self.state.equity:,.2f}")
-            print(f"Drawdown: {self.state.total_drawdown_pct:.2f}%")
-            print(f"Mode: {self.state.mode}")
-            print(f"Risk Status: {status}")
+        return result
 
-        print("\n✅ Session Complete")
+    async def execute(self):
 
-    
-    def run_continuous(self, sleep_interval=1, max_cycles=100):
+        print("Router Execute Called")
 
-        import time
-        import random
+        pnl = 0 #Always initiate first
 
-        print("\n🧠 Autonomous Engine Activated (Fast Mode)")
+        return {
+            "executed": False,
+            "pnl": 0,
+            "reason": "UNKNOWN"
+        }
+        
+        pnl = self.simulate_trade()
 
-        cycle_count = 0
+        result["executed"] = True
+        result["pnl"] = pnl
+        result["reason"] = "PERMIT"
 
-        while cycle_count < max_cycles:
 
-            if self.state.mode == "HALTED":
-                print("🛑 System Halted. Awaiting Manual Intervention.")
-                break
+        result["executed"] = False
+        result["pnl"] = 0
+        result["reason"] = "FILTER"
 
-            cycle_count += 1
-            print(f"\n🔄 Cycle {cycle_count}")
+        return result
 
-            # Placeholder: future health check hook
-            # self.health_monitor.check()
-
-            snapshot = self.intel.generate_snapshot()
-            print("📊 Snapshot:", snapshot)
-
-            score, threshold, decision = self.confluence.calculate(snapshot)
-
-            print(f"Score: {score} | Threshold: {threshold} | Decision: {decision}")
-
-            if decision == "PERMIT":
-
-                if self.state.mode == "DEFENSIVE":
-                    trade_return = random.uniform(-1, 1)
-                else:
-                    trade_return = random.uniform(-2, 2)
-
-                print(f"⚡ Executing Trade: {trade_return:.2f}%")
-
-                self.tracker.update_equity(self.state, trade_return)
-                status = self.risk.evaluate(self.state)
-
-                print(f"Equity: ₹{self.state.equity:,.2f}")
-                print(f"Drawdown: {self.state.total_drawdown_pct:.2f}%")
-                print(f"Mode: {self.state.mode}")
-                print(f"Risk: {status}")
-
-            else:
-                print("🚫 Trade Skipped")
-
-            time.sleep(sleep_interval)
-
-        print("\n✅ Autonomous Session Completed")
+        
