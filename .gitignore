@@ -1,6 +1,17 @@
+# Python cache
 __pycache__/
 *.pyc
-*.pyo
-*.pyd
-.env
+
+# Virtual env
+.venv/
+
+# Logs
+logs/
+
+# Backtest outputs
+equity_curve.csv
+*.csv
+
+# OS
 .DS_Store
+Thumbs.db
